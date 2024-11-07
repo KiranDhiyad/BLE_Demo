@@ -6,50 +6,22 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 class GattServiceAdapter(
     private val gattServices: List<GattServiceItem>,
     private val onCharacteristicClick: (BluetoothGattService,BluetoothGattCharacteristic) -> Unit
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+) : RecyclerView.Adapter<GattServiceAdapter.ServiceViewHolder>() {
 
-    companion object {
-        private const val VIEW_TYPE_SERVICE = 0
-        private const val VIEW_TYPE_CHARACTERISTIC = 1
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ServiceViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_gatt_service, parent, false)
+        return ServiceViewHolder(view)
     }
 
-    override fun getItemViewType(position: Int): Int {
-        return if (gattServices[position].isExpanded) VIEW_TYPE_CHARACTERISTIC else VIEW_TYPE_SERVICE
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        return if (viewType == VIEW_TYPE_SERVICE) {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_gatt_service, parent, false)
-            ServiceViewHolder(view)
-        } else {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_gatt_characteristic, parent, false)
-            CharacteristicViewHolder(view)
-        }
-    }
-
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val item = gattServices[position]
-        if (holder is ServiceViewHolder) {
-            holder.bind(item.service,position)
-            holder.itemView.setOnClickListener {
-                // Toggle expansion
-                item.isExpanded = !item.isExpanded
-                notifyDataSetChanged() // Refresh the list to expand/collapse
-//                onServiceClick(item.service)
-            }
-        } else if (holder is CharacteristicViewHolder) {
-            holder.bind(item.characteristics,position)
-            holder.itemView.setOnClickListener {
-                Log.e("BLE","onCharacteristicClick : ${item.service.uuid} : ${item.characteristics[position].uuid}")
-                onCharacteristicClick(item.service,item.characteristics[position])
-            }
-        }
+    override fun onBindViewHolder(holder: ServiceViewHolder, position: Int) {
+        holder.bind(gattServices[position],position)
     }
 
     override fun getItemCount(): Int = gattServices.size
@@ -57,18 +29,55 @@ class GattServiceAdapter(
     inner class ServiceViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val serviceNameTextView: TextView = view.findViewById(R.id.serviceNameTextView)
         private val serviceUuidTextView: TextView = view.findViewById(R.id.serviceUuidTextView)
+        private val characteristicsContainer: LinearLayout = view.findViewById(R.id.characteristicsContainer)
 
-        fun bind(service: BluetoothGattService,position: Int) {
-//            serviceNameTextView.text = if (service.isPrimary) "Primary Service" else "Secondary Service"
-            serviceUuidTextView.text = "$position Service UUID: ${service.uuid} /n Characteristics:${service.characteristics.size}"
+        fun bind(serviceItem: GattServiceItem,position: Int) {
+//            serviceNameTextView.text = if (serviceItem.service.isPrimary) "Primary Service" else "Secondary Service"
+            serviceNameTextView.text = "Service ${position+1} and it's Characteristics:${serviceItem.characteristics.size}"
+            serviceUuidTextView.text = "UUID: " + serviceItem.service.uuid.toString()
+
+            // Toggle characteristics visibility on click
+            itemView.setOnClickListener {
+                serviceItem.isExpanded = !serviceItem.isExpanded
+                characteristicsContainer.visibility = if (serviceItem.isExpanded) View.VISIBLE else View.GONE
+                if (serviceItem.isExpanded) showCharacteristics(serviceItem.service,serviceItem.characteristics)
+            }
+        }
+
+        private fun showCharacteristics(serviceItem: BluetoothGattService,characteristics: List<BluetoothGattCharacteristic>) {
+            Log.e("GattServiceAdapter", "showCharacteristics: $characteristics")
+            characteristicsContainer.removeAllViews() // Clear any previous views
+
+            for (characteristic in characteristics) {
+                val characteristicView = LayoutInflater.from(itemView.context)
+                    .inflate(R.layout.item_gatt_characteristic, characteristicsContainer, false)
+
+                val uuidTextView: TextView = characteristicView.findViewById(R.id.characteristicUuidTextView)
+                val propertiesTextView: TextView = characteristicView.findViewById(R.id.characteristicPropertiesTextView)
+                val readDataTextView: TextView = characteristicView.findViewById(R.id.characteristicReadData)
+                readDataTextView.visibility = View.GONE
+
+                uuidTextView.text = "Characteristic UUID: " + characteristic.uuid.toString()
+                propertiesTextView.text = "Characteristic Properties: " + getCharacteristicProperties(characteristic)
+//                readDataTextView.text = "Read Data: " + characteristic.value.toString()
+
+                characteristicView.setOnClickListener {
+                    onCharacteristicClick(serviceItem,characteristic)
+                }
+
+                characteristicsContainer.addView(characteristicView)
+                notifyDataSetChanged()
+
+            }
+        }
+
+        private fun getCharacteristicProperties(characteristic: BluetoothGattCharacteristic): String {
+            val properties = mutableListOf<String>()
+            if (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_READ != 0) properties.add("Read")
+            if (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0) properties.add("Write")
+            if (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0) properties.add("Notify")
+            return properties.joinToString(", ")
         }
     }
 
-    inner class CharacteristicViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        private val characteristicUuidTextView: TextView = view.findViewById(R.id.characteristicUuidTextView)
-
-        fun bind(characteristics: List<BluetoothGattCharacteristic>,position: Int) {
-            characteristicUuidTextView.text = "$position Characteristic UUID: ${characteristics[adapterPosition].uuid}"
-        }
-    }
 }

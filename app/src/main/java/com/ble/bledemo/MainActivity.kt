@@ -321,11 +321,13 @@ class MainActivity : AppCompatActivity(), DeviceAdapter.OnDeviceClickListener {
                 val data = characteristic.value  // Get the data from characteristic
                 processCharacteristicData(data)
             }
+            log("GattCallback onCharacteristicRead received: $status")
         }
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             val data = characteristic.value  // Data from notification
             processCharacteristicData(data)
+            log("GattCallback onCharacteristicChanged received: $data")
         }
     }
 
@@ -346,7 +348,11 @@ class MainActivity : AppCompatActivity(), DeviceAdapter.OnDeviceClickListener {
     private fun processCharacteristicData(data: ByteArray?) {
         data?.let {
             val stringData = it.toString(Charsets.UTF_8) // Convert byte array to string, if applicable
-            Log.i("CharacteristicData", "Received data: $stringData")
+            Log.e("CharacteristicData", "Received data: $stringData")
+            runOnUiThread {
+                Toast.makeText(this@MainActivity, "Get Data: $stringData", Toast.LENGTH_SHORT)
+                    .show()
+            }
         }
     }
 
@@ -385,6 +391,7 @@ class MainActivity : AppCompatActivity(), DeviceAdapter.OnDeviceClickListener {
     }
 
     override fun readCharacteristic(serviceUUID: UUID, characteristicUUID: UUID) {
+        log("readCharacteristic called serviceUUID: $serviceUUID characteristicUUID: $characteristicUUID")
         val service = bluetoothGatt?.getService(serviceUUID)
         val characteristic = service?.getCharacteristic(characteristicUUID)
         if (characteristic != null) {
@@ -401,6 +408,9 @@ class MainActivity : AppCompatActivity(), DeviceAdapter.OnDeviceClickListener {
                 // to handle the case where the user grants the permission. See the documentation
                 // for ActivityCompat#requestPermissions for more details.
                 return
+            }
+            runOnUiThread {
+                Toast.makeText(this, "Read Characteristic", Toast.LENGTH_SHORT).show()
             }
             bluetoothGatt?.readCharacteristic(characteristic)
         }

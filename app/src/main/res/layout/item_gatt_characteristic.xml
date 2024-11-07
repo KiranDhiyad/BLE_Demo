@@ -1,15 +1,31 @@
+<!-- res/layout/item_ble_characteristic.xml -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="8dp"
-    android:background="#f0f0f0">
+    android:clickable="true"
+    android:focusable="true">
 
+    <!-- Characteristic UUID -->
     <TextView
         android:id="@+id/characteristicUuidTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="14sp" />
+
+    <!-- Characteristic Properties (Read, Write, Notify) -->
+    <TextView
+        android:id="@+id/characteristicPropertiesTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:textColor="@android:color/black"/>
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/characteristicReadData"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="14sp" />
 </LinearLayout>
